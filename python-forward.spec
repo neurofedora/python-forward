@@ -1,114 +1,108 @@
-%global upname forward
-%{!?__python2: %global __python2 %__python}
-%{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
-%{!?python2_sitearch: %global python2_sitearch %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
+%global modname forward
+%global commit 94a6c2af58be59be9d779f4cc85af02532887f84
+%global shortcommit %(c=%{commit}; echo ${c:0:7})
 
-Name:           python-forward
+Name:           python-%{modname}
 Version:        0.1
-Release:        1%{?dist}
+Release:        0.1.git%{shortcommit}%{?dist}
 Summary:        Accurate electromagnetic head models and EEG lead field matrices from T1 / DTI
-License:        GPLv2
-URL:             
-Source0:        %{upname}.tar.gz
-#BuildArch:      
-BuildRequires:  python2-devel
-%if %{with python3}
-BuildRequires:  python3-devel
-%endif # with python3
+License:        GPLv2+
+URL:            http://cyclotronresearchcentre.github.io/forward/
+Source0:        https://github.com/CyclotronResearchCentre/forward/archive/%{commit}/%{modname}-%{shortcommit}.tar.gz
+BuildArch:      noarch
 
 %description
-This project aims to simplify the preparation of accurate
-electromagnetic head models for EEG forward modeling.
-It builds off of the seminal SimNIBS tool the field
-modelling of transcranial magnetic stimulation (TMS) and
-transcranial direct current stimulation. Human skin, skull,
-cerebrospinal fluid, and brain meshing pipelines have been
-rewritten with Nipype to ease access parallel processing
-and to allow users to start/stop the workflows. 
-Conductivity tensor mapping from diffusion-weighted 
-imaging is also included.
+This project aims to simplify the preparation of accurate electromagnetic head
+models for EEG forward modeling.
 
-%if %{with python3}
-%package     -n 
-Summary:        
+It builds off of the seminal SimNIBS tool for electromagnetic field modelling
+of transcranial magnetic stimulation (TMS) and transcranial direct current
+stimulation. Human skin, skull, cerebrospinal fluid, and brain meshing pipelines
+have been rewritten with Nipype to ease access parallel processing and to allow
+users to start/stop the workflows. Conductivity tensor mapping from
+diffusion-weighted imaging is also included.
 
-%description -n 
+%package -n python2-%{modname}
+Summary:        %{summary}
+BuildRequires:  python2-devel
+Requires:       numpy scipy
+Requires:       h5py
+Requires:       python2-nibabel
+Requires:       python-matplotlib
+Requires:       python2-nipype
 
-%endif # with python3
+%description -n python2-%{modname}
+This project aims to simplify the preparation of accurate electromagnetic head
+models for EEG forward modeling.
 
+It builds off of the seminal SimNIBS tool for electromagnetic field modelling
+of transcranial magnetic stimulation (TMS) and transcranial direct current
+stimulation. Human skin, skull, cerebrospinal fluid, and brain meshing pipelines
+have been rewritten with Nipype to ease access parallel processing and to allow
+users to start/stop the workflows. Conductivity tensor mapping from
+diffusion-weighted imaging is also included.
+
+Python 2 version.
+
+%package -n python3-%{modname}
+Summary:        %{summary}
+BuildRequires:  python3-devel
+Requires:       python3-numpy python3-scipy
+Requires:       python3-h5py
+Requires:       python3-nibabel
+Requires:       python3-matplotlib
+Requires:       python3-nipype
+
+%description -n python3-%{modname}
+This project aims to simplify the preparation of accurate electromagnetic head
+models for EEG forward modeling.
+
+It builds off of the seminal SimNIBS tool for electromagnetic field modelling
+of transcranial magnetic stimulation (TMS) and transcranial direct current
+stimulation. Human skin, skull, cerebrospinal fluid, and brain meshing pipelines
+have been rewritten with Nipype to ease access parallel processing and to allow
+users to start/stop the workflows. Conductivity tensor mapping from
+diffusion-weighted imaging is also included.
+
+Python 3 version.
 
 %prep
-%setup -qc
-mv %{name}-%{version} python2
-
-%if %{with python3}
+%autosetup -c
+mv %{modname}-%{commit} python2
+pushd python2
+  sed -i -e '/import setuptools/d' setup.py
+popd
 cp -a python2 python3
-%endif # with python3
-
+2to3 --write --nobackup python3
 
 %build
+export LC_ALL="en_US.utf8"
 pushd python2
-# Remove CFLAGS=... for noarch packages (unneeded)
-#CFLAGS="$RPM_OPT_FLAGS" %{__python2} setup.py build
-%py2_build
+  %py2_build
 popd
-
-%if %{with python3}
 pushd python3
-# Remove CFLAGS=... for noarch packages (unneeded)
-#CFLAGS="$RPM_OPT_FLAGS" %{__python3} setup.py build
-%py3_build
+  %py3_build
 popd
-%endif # with python3
-
 
 %install
-rm -rf $RPM_BUILD_ROOT
-# Must do the python3 install first because the scripts in /usr/bin are
-# overwritten with every setup.py install (and we want the python2 version
-# to be the default for now).
-%if %{with python3}
-pushd python3
-#%{__python3} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT
-%py3_install
-popd
-%endif # with python3
-
+export LC_ALL="en_US.utf8"
 pushd python2
-#%{__python2} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT
-py2_install
+  %py2_install
 popd
-
-
-%check
-pushd python2
-%{__python2} setup.py test
-popd
-
-%if %{with python3}
 pushd python3
-%{__python2} setup.py test
+  %py3_install
 popd
-%endif
 
+%files -n python2-%{modname}
+%license python2/LICENSE
+%{python2_sitelib}/Forward*.egg-info
+%{python2_sitelib}/%{modname}/
 
-%files
-%doc
-# For noarch packages: sitelib
-%{python2_sitelib}/*
-# For arch-specific packages: sitearch
-%{python2_sitearch}/*
-
-%if %{with python3}
-%files -n 
-%doc
-# For noarch packages: sitelib
-%{python3_sitelib}/*
-# For arch-specific packages: sitearch
-%{python3_sitearch}/*
-%endif # with python3
-
+%files -n python3-%{modname}
+%license python3/LICENSE
+%{python3_sitelib}/Forward*.egg-info
+%{python3_sitelib}/%{modname}/
 
 %changelog
-* Wed Nov  4 2015 Adrian Alves <alvesadrian@fedoraproject.org> 0.1-1
-- Initial Build
+* Tue Nov 17 2015 Igor Gnatenko <i.gnatenko.brain@gmail.com> - 0.1-0.1.git94a6c2a
+- Initial package
